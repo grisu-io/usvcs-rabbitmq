@@ -47,20 +47,19 @@ public class ClientServerRabbitMQTest {
     }
 
     @Test
-    public void shouldCompleteRoundTrip() throws IOException, TimeoutException, InterruptedException {
+    public void shouldCompleteRoundTripWithCompletableFuture() throws IOException, TimeoutException, InterruptedException {
         CompletableFuture<String> cf = apiClient.echoService("repeat this");
         Assert.assertEquals(">>>repeat this", cf.join());
     }
 
     @Test
     public void shouldCompleteExceptionally() throws IOException, TimeoutException, InterruptedException {
-        String result = apiClient.errorService(7447)
-            .exceptionally( e -> {
-                Assert.assertTrue(e instanceof GrisuException);
-                GrisuException grisuException = (GrisuException) e;
-                Assert.assertEquals(7447, (int)grisuException.getErrorCode());
-                return "ko";
-            }).join();
+        try {
+            apiClient.errorService(7448).join();
+            Assert.fail("Shouldn't pass here");
+        } catch (Throwable t) {
+            Assert.assertEquals(7448, (int) ((GrisuException) t.getCause()).getErrorCode());
+        }
     }
 
 }

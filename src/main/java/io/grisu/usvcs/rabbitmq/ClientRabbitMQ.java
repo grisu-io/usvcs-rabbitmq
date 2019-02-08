@@ -1,29 +1,25 @@
 package io.grisu.usvcs.rabbitmq;
 
 import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.*;
+import io.grisu.core.exceptions.GrisuException;
+import io.grisu.pojo.AbstractPojo;
 import io.grisu.pojo.utils.JSONUtils;
 import io.grisu.usvcs.Client;
-import io.grisu.usvcs.rabbitmq.consumers.ClientDefault;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ClientRabbitMQ implements Client {
-
-    private final Logger log = LoggerFactory.getLogger(getClass());
-
     private final Channel channel;
     private final String replyQueueName;
     private final Map<String, Object[]> listeners;
     private final AtomicBoolean running;
-    private final ClientDefault clientDefault;
+    private final Consumer consumer;
 
     private String consumerTag;
 
@@ -32,7 +28,24 @@ public class ClientRabbitMQ implements Client {
         this.replyQueueName = channel.queueDeclare().getQueue();
         this.listeners = new ConcurrentHashMap<>();
         this.running = new AtomicBoolean(false);
-        clientDefault = new ClientDefault(listeners, channel);
+        this.consumer = new DefaultConsumer(channel) {
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
+                Object[] entry = listeners.remove(properties.getCorrelationId());
+                if (entry != null) {
+                    CompletableFuture listener = (CompletableFuture<AbstractPojo>) entry[1];
+
+                    final Object[] objects = RPCUtils.decodeMessage(body);
+
+                    if (RabbitMQConstants.KO.equals(objects[0])) {
+                        listener.completeExceptionally(GrisuException.build(JSONUtils.decode((byte[]) objects[1], Map.class)));
+                    } else {
+                        final Object ret = JSONUtils.decode((byte[]) objects[1], ((ParameterizedType) entry[0]).getActualTypeArguments()[0]);
+                        listener.complete(ret);
+                    }
+                }
+            }
+        };
     }
 
     public void start() {
@@ -42,10 +55,8 @@ public class ClientRabbitMQ implements Client {
         running.set(true);
 
         try {
-            consumerTag = channel.basicConsume(replyQueueName, true, clientDefault);
-            log.debug("consumerTag: " + consumerTag);
+            consumerTag = channel.basicConsume(replyQueueName, true, consumer);
         } catch (Exception e) {
-            log.error("exception", e);
         }
     }
 

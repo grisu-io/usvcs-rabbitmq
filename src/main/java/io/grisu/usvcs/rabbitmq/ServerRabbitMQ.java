@@ -3,23 +3,22 @@ package io.grisu.usvcs.rabbitmq;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.*;
+import io.grisu.core.GrisuConstants;
+import io.grisu.core.exceptions.GrisuException;
+import io.grisu.core.utils.MapBuilder;
+import io.grisu.pojo.utils.JSONUtils;
 import io.grisu.usvcs.annotations.MicroService;
 import io.grisu.usvcs.annotations.NanoService;
-import io.grisu.usvcs.rabbitmq.consumers.ServerDefault;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ServerRabbitMQ {
 
     private static final long SLEEP_MILLISECS = 1000;
-
-    private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final Channel channel;
     private final String rpcQueueName;
@@ -29,7 +28,7 @@ public class ServerRabbitMQ {
     private volatile AtomicBoolean running;
     private String consumerTag;
 
-    final ServerDefault serverDefault;
+    final Consumer consumer;
 
     public ServerRabbitMQ(Channel channel, int concurrency, Object uServiceImpl) {
         this.channel = channel;
@@ -58,11 +57,50 @@ public class ServerRabbitMQ {
             }
         }));
 
-        serverDefault = new ServerDefault(channel, rpcQueueName, nServicesHandlers, uServiceImpl);
+        consumer = new DefaultConsumer(channel) {
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                final Object[] message = RPCUtils.decodeMessage(body);
+
+                String nService = (String) message[0];
+
+                if (nService != null) {
+                    AMQP.BasicProperties replyProps = new AMQP.BasicProperties
+                        .Builder()
+                        .correlationId(properties.getCorrelationId())
+                        .build();
+
+                    Object result;
+                    String opResult = RabbitMQConstants.OK;
+                    try {
+                        final java.lang.reflect.Method method = nServicesHandlers.get(nService);
+                        if (method == null) {
+                            throw new RuntimeException(rpcQueueName + "#" + nService + " nanoService not found!");
+                        }
+
+                        Object[] params = JSONUtils.decodeAsParams((byte[]) message[1], method.getGenericParameterTypes());
+                        result = ((CompletableFuture<?>) method.invoke(uServiceImpl, params)).join();
+                    } catch (Exception e) {
+                        opResult = RabbitMQConstants.KO;
+                        if (e.getCause() != null && e.getCause() instanceof GrisuException) {
+                            result = ((GrisuException) e.getCause()).serialize();
+                        } else {
+                            result = MapBuilder.instance().add(GrisuConstants.ERROR, e.toString()).add("errorCode", 500).build();
+                        }
+                    }
+
+                    try {
+                        channel.basicAck(envelope.getDeliveryTag(), false);
+                        channel.basicPublish("", properties.getReplyTo(), replyProps, RPCUtils.encodeMessage(opResult, JSONUtils.encode(result)));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
     }
 
     public void start() throws IOException, InterruptedException {
-        log.info("Ready...");
         this.running = new AtomicBoolean(true);
 
         channel.queueDeclare(rpcQueueName, false, false, false, null);
@@ -70,12 +108,11 @@ public class ServerRabbitMQ {
             channel.basicQos(concurrency);
         }
 
-        consumerTag = channel.basicConsume(rpcQueueName, false, serverDefault);
+        consumerTag = channel.basicConsume(rpcQueueName, false, consumer);
 
     }
 
     public void stop() throws IOException, TimeoutException, InterruptedException {
-        log.info("Initiating graceful shutdown...");
         this.running.set(false);
 
         channel.basicCancel(consumerTag);
