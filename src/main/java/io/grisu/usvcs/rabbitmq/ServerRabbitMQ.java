@@ -89,12 +89,8 @@ public class ServerRabbitMQ {
                         }
                     }
 
-                    try {
-                        channel.basicAck(envelope.getDeliveryTag(), false);
-                        channel.basicPublish("", properties.getReplyTo(), replyProps, RPCUtils.encodeMessage(opResult, JSONUtils.encode(result)));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    channel.basicAck(envelope.getDeliveryTag(), false);
+                    channel.basicPublish("", properties.getReplyTo(), replyProps, RPCUtils.encodeMessage(opResult, JSONUtils.encode(result)));
                 }
             }
         };
