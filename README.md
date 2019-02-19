@@ -4,7 +4,7 @@
 
 Part of the [grisu.io](https://grisu.io) framework.
 
-Chers,
+Cheers,
 
 @lordkada
 
