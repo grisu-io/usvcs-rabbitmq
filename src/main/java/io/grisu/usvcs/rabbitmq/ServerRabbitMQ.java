@@ -1,5 +1,12 @@
 package io.grisu.usvcs.rabbitmq;
 
+import com.rabbitmq.client.*;
+import io.grisu.core.exceptions.GrisuException;
+import io.grisu.core.utils.MapBuilder;
+import io.grisu.pojo.utils.JSONUtils;
+import io.grisu.usvcs.annotations.MicroService;
+import io.grisu.usvcs.annotations.NanoService;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -7,14 +14,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
-
-import com.rabbitmq.client.*;
-import io.grisu.core.GrisuConstants;
-import io.grisu.core.exceptions.GrisuException;
-import io.grisu.core.utils.MapBuilder;
-import io.grisu.pojo.utils.JSONUtils;
-import io.grisu.usvcs.annotations.MicroService;
-import io.grisu.usvcs.annotations.NanoService;
 
 public class ServerRabbitMQ {
 
@@ -85,7 +84,9 @@ public class ServerRabbitMQ {
                         if (e.getCause() != null && e.getCause() instanceof GrisuException) {
                             result = ((GrisuException) e.getCause()).serialize();
                         } else {
-                            result = MapBuilder.instance().add(GrisuConstants.ERROR, e.toString()).add("errorCode", 500).build();
+                            result = MapBuilder.instance()
+                                .add(RabbitMQConstants.RABBITMQ_ERROR_MESSAGE, e.toString())
+                                .add(RabbitMQConstants.RABBITMQ_ERROR_CODE, RabbitMQConstants.ERROR_CODE).build();
                         }
                     }
 

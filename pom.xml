@@ -36,7 +36,13 @@
     <dependency>
       <groupId>io.grisu</groupId>
       <artifactId>usvcs</artifactId>
-      <version>1.0.2</version>
+      <version>1.0.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.grisu</groupId>
+      <artifactId>core</artifactId>
+      <version>2.0.0</version>
     </dependency>
 
     <dependency>
@@ -68,7 +74,7 @@
   </dependencies>
 
   <scm>
-    <url>https://github.com/grisu-io/usvcs</url>
+    <url>https://github.com/grisu-io/usvcs-rabbitmq</url>
     <connection>scm:git:git@github.com:grisu-io/usvcs-rabbitmq.git</connection>
     <tag>HEAD</tag>
   </scm>
