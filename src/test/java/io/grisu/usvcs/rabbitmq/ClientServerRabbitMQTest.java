@@ -12,6 +12,7 @@ import io.grisu.core.exceptions.GrisuException;
 import io.grisu.usvcs.rabbitmq.supportingclasses.Api;
 import io.grisu.usvcs.rabbitmq.supportingclasses.ApiImpl;
 import io.grisu.usvcs.rabbitmq.supportingclasses.ApiStub;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,7 +59,7 @@ public class ClientServerRabbitMQTest {
             apiClient.errorService(7448).join();
             Assert.fail("Shouldn't pass here");
         } catch (Throwable t) {
-            Assert.assertEquals(7448, (int) ((GrisuException) t.getCause()).getErrorCode());
+            Assert.assertEquals(7448, (int) ((GrisuException) ExceptionUtils.getRootCause(t)).getErrorCode());
         }
     }
 

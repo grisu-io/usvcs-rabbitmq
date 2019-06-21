@@ -8,6 +8,7 @@ import io.grisu.usvcs.annotations.MicroService;
 import io.grisu.usvcs.annotations.NanoService;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -81,11 +82,21 @@ public class ServerRabbitMQ {
                         result = ((CompletableFuture<?>) method.invoke(uServiceImpl, params)).join();
                     } catch (Exception e) {
                         opResult = RabbitMQConstants.KO;
-                        if (e.getCause() != null && e.getCause() instanceof GrisuException) {
-                            result = ((GrisuException) e.getCause()).serialize();
+
+                        Throwable th;
+
+                        if (e instanceof InvocationTargetException) {
+                            th = ((InvocationTargetException)e).getTargetException();
                         } else {
-                            result = MapBuilder.instance()
-                                .add(RabbitMQConstants.RABBITMQ_ERROR_MESSAGE, e.toString())
+                            th = e;
+                        }
+
+                        if (th instanceof GrisuException) {
+                            result = ((GrisuException) th).serialize();
+                        } else {
+                            result = MapBuilder
+                                .instance()
+                                .add(RabbitMQConstants.RABBITMQ_ERROR_MESSAGE, th.toString())
                                 .add(RabbitMQConstants.RABBITMQ_ERROR_CODE, RabbitMQConstants.ERROR_CODE).build();
                         }
                     }
