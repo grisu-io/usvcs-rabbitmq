@@ -18,6 +18,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.*;
+
 public class ClientServerRabbitMQTest {
 
     Channel channel;
@@ -48,18 +50,33 @@ public class ClientServerRabbitMQTest {
     }
 
     @Test
-    public void shouldCompleteRoundTripWithCompletableFuture() throws IOException, TimeoutException, InterruptedException {
+    public void shouldCompleteRoundTripWithCompletableFuture() {
         CompletableFuture<String> cf = apiClient.echoService("repeat this");
         Assert.assertEquals(">>>repeat this", cf.join());
     }
 
     @Test
-    public void shouldCompleteExceptionally() throws IOException, TimeoutException, InterruptedException {
+    public void shouldCompleteExceptionally_GrisuException() {
         try {
-            apiClient.errorService(7448).join();
+            apiClient.errorServiceGrisuException(7448).join();
             Assert.fail("Shouldn't pass here");
         } catch (Throwable t) {
             Assert.assertEquals(7448, (int) ((GrisuException) ExceptionUtils.getRootCause(t)).getErrorCode());
+        }
+    }
+
+    @Test
+    public void shouldCompleteExceptionally_NonGrisuException() {
+        try {
+            apiClient.errorServiceNonGrisuException().join();
+            Assert.fail("Shouldn't pass here");
+        } catch (Throwable t) {
+            assertNotNull(t.getCause());
+            Assert.assertEquals(500, (int) ((GrisuException) ExceptionUtils.getRootCause(t)).getErrorCode());
+
+            assertTrue(t.getCause() instanceof GrisuException);
+            GrisuException grisuException = (GrisuException) t.getCause();
+            assertEquals("java.lang.RuntimeException: All Your Base Are Belong To Us", grisuException.getErrorMessage());
         }
     }
 

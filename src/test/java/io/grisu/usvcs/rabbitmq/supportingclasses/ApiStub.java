@@ -18,9 +18,14 @@ public class ApiStub extends AbstractStub implements Api {
     }
 
     @Override
-    public CompletableFuture<String> errorService(Integer errorToReturn) {
+    public CompletableFuture<String> errorServiceGrisuException(Integer errorToReturn) {
         return super.call(new Object() {
         }.getClass().getEnclosingMethod(), errorToReturn);
     }
 
+    @Override
+    public CompletableFuture<String> errorServiceNonGrisuException() {
+        return super.call(new Object() {
+        }.getClass().getEnclosingMethod());
+    }
 }
