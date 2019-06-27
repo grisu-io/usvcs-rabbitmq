@@ -11,7 +11,10 @@ public interface Api {
     @NanoService(name = "echo")
     CompletableFuture<String> echoService(String string);
 
-    @NanoService(name = "error")
-    CompletableFuture<String> errorService(Integer errorToReturn);
+    @NanoService(name = "error-grisu")
+    CompletableFuture<String> errorServiceGrisuException(Integer errorToReturn);
+
+    @NanoService(name = "error-non-grisu")
+    CompletableFuture<String> errorServiceNonGrisuException();
 
 }

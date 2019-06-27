@@ -14,8 +14,12 @@ public class ApiImpl implements Api {
     }
 
     @Override
-    public CompletableFuture<String> errorService(Integer errorToReturn) {
+    public CompletableFuture<String> errorServiceGrisuException(Integer errorToReturn) {
         throw GrisuException.build(MapBuilder.instance().add(GrisuConstants.ERROR_CODE, errorToReturn).build());
     }
 
+    @Override
+    public CompletableFuture<String> errorServiceNonGrisuException() {
+        throw new RuntimeException("All Your Base Are Belong To Us");
+    }
 }

@@ -1,6 +1,7 @@
 package io.grisu.usvcs.rabbitmq;
 
 import com.rabbitmq.client.*;
+import io.grisu.core.GrisuConstants;
 import io.grisu.core.exceptions.GrisuException;
 import io.grisu.core.utils.MapBuilder;
 import io.grisu.pojo.utils.JSONUtils;
@@ -96,8 +97,8 @@ public class ServerRabbitMQ {
                         } else {
                             result = MapBuilder
                                 .instance()
-                                .add(RabbitMQConstants.RABBITMQ_ERROR_MESSAGE, th.toString())
-                                .add(RabbitMQConstants.RABBITMQ_ERROR_CODE, RabbitMQConstants.ERROR_CODE).build();
+                                .add(GrisuConstants.ERROR_MESSAGE, th.toString())
+                                .add(GrisuConstants.ERROR_CODE, RabbitMQConstants.ERROR_CODE).build();
                         }
                     }
 
