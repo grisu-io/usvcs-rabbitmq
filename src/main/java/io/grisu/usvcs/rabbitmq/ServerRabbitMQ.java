@@ -3,6 +3,7 @@ package io.grisu.usvcs.rabbitmq;
 import com.rabbitmq.client.*;
 import io.grisu.core.GrisuConstants;
 import io.grisu.core.exceptions.GrisuException;
+import io.grisu.core.utils.ExceptionUtils;
 import io.grisu.core.utils.MapBuilder;
 import io.grisu.pojo.utils.JSONUtils;
 import io.grisu.usvcs.annotations.MicroService;
@@ -92,8 +93,12 @@ public class ServerRabbitMQ {
                             th = e;
                         }
 
+                        Throwable cause = ExceptionUtils.findRootException(th);
+
                         if (th instanceof GrisuException) {
                             result = ((GrisuException) th).serialize();
+                        } else if (cause instanceof GrisuException) {
+                            result = ((GrisuException) cause).serialize();
                         } else {
                             result = MapBuilder
                                 .instance()
