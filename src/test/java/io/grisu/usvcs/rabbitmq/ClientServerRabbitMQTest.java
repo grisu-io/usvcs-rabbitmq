@@ -66,6 +66,27 @@ public class ClientServerRabbitMQTest {
     }
 
     @Test
+    public void shouldCompleteExceptionally_CompletionExceptionWrappingGrisuException() {
+        try {
+            apiClient.errorServiceCompletionExceptionGrisuException(7448).join();
+            Assert.fail("Shouldn't pass here");
+        } catch (Throwable t) {
+            Assert.assertEquals(7448, (int) ((GrisuException) ExceptionUtils.getRootCause(t)).getErrorCode());
+        }
+    }
+
+    @Test
+    public void shouldCompleteExceptionally_CompletionExceptionWrappingGrisuException_l2() {
+        try {
+            apiClient.errorServiceCompletionExceptionGrisuException_Wrap2(7448).join();
+            Assert.fail("Shouldn't pass here");
+        } catch (Throwable t) {
+            GrisuException grisuException = ((GrisuException) ExceptionUtils.getRootCause(t));
+            Assert.assertEquals(7448, (int) grisuException.getErrorCode());
+        }
+    }
+
+    @Test
     public void shouldCompleteExceptionally_NonGrisuException() {
         try {
             apiClient.errorServiceNonGrisuException().join();

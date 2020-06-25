@@ -35,12 +35,12 @@ public class ServerRabbitMQ {
         this.channel = channel;
         this.concurrency = concurrency;
 
-        final Class uServiceHandler = Stream.of(uServiceImpl.getClass().getInterfaces())
+        final Class<?> uServiceHandler = Stream.of(uServiceImpl.getClass().getInterfaces())
             .filter(i -> i.getAnnotation(MicroService.class) != null).findFirst().orElseThrow(() ->
                 new RuntimeException("Service not annotated with @MicroService (" + uServiceImpl.getClass() + ")")
             );
 
-        this.rpcQueueName = ((MicroService) uServiceHandler.getAnnotation(MicroService.class)).serviceQueue();
+        this.rpcQueueName = uServiceHandler.getAnnotation(MicroService.class).serviceQueue();
 
         nServicesHandlers = new HashMap<>();
         Stream.of(uServiceHandler.getMethods())
@@ -55,6 +55,7 @@ public class ServerRabbitMQ {
             try {
                 this.stop();
             } catch (Exception e) {
+                // Left intentionally blank
             }
         }));
 
@@ -87,13 +88,15 @@ public class ServerRabbitMQ {
                         Throwable th;
 
                         if (e instanceof InvocationTargetException) {
-                            th = ((InvocationTargetException)e).getTargetException();
+                            th = ((InvocationTargetException) e).getTargetException();
                         } else {
                             th = e;
                         }
 
-                        if (th instanceof GrisuException) {
-                            result = ((GrisuException) th).serialize();
+                        Throwable cause = findRootExceptionOrGrisuException(th);
+
+                        if (cause instanceof GrisuException) {
+                            result = ((GrisuException) cause).serialize();
                         } else {
                             result = MapBuilder
                                 .instance()
@@ -130,6 +133,13 @@ public class ServerRabbitMQ {
         Connection connection = channel.getConnection();
         channel.close();
         connection.close();
+    }
+
+    private static Throwable findRootExceptionOrGrisuException(Throwable throwable) {
+        while (throwable != null && !(throwable instanceof GrisuException) && throwable.getCause() != null && throwable != throwable.getCause()) {
+            throwable = throwable.getCause();
+        }
+        return throwable;
     }
 
 }
