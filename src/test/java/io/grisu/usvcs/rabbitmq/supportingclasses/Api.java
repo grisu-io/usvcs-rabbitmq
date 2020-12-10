@@ -11,6 +11,9 @@ public interface Api {
     @NanoService(name = "echo")
     CompletableFuture<String> echoService(String string);
 
+    @NanoService(name = "long-running")
+    CompletableFuture<String> longRunningService(Long millisecs, String id);
+
     @NanoService(name = "error-grisu")
     CompletableFuture<String> errorServiceGrisuException(Integer errorToReturn);
 

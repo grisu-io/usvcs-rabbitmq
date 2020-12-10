@@ -1,9 +1,5 @@
 package io.grisu.usvcs.rabbitmq;
 
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
-
 import com.github.fridujo.rabbitmq.mock.MockConnectionFactory;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -17,6 +13,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -53,6 +54,19 @@ public class ClientServerRabbitMQTest {
     public void shouldCompleteRoundTripWithCompletableFuture() {
         CompletableFuture<String> cf = apiClient.echoService("repeat this");
         Assert.assertEquals(">>>repeat this", cf.join());
+    }
+
+    @Test
+    public void shouldRunParallelTasks() throws Throwable {
+        Long start = new Date().getTime();
+        CompletableFuture<String> cf1 = apiClient.longRunningService(1500L, "1");
+        CompletableFuture<String> cf2 = apiClient.longRunningService(1500L, "2");
+        CompletableFuture<String> cf3 = apiClient.longRunningService(1500L, "3");
+        CompletableFuture.allOf(cf1, cf2, cf3).join();
+        Long end = new Date().getTime();
+        Assert.assertEquals("1", cf1.get());
+        Assert.assertEquals("2", cf2.get());
+        Assert.assertTrue(end - start < 2000);
     }
 
     @Test

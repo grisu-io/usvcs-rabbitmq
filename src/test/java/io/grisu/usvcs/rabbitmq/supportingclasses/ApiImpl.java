@@ -1,17 +1,38 @@
 package io.grisu.usvcs.rabbitmq.supportingclasses;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-
 import io.grisu.core.GrisuConstants;
 import io.grisu.core.exceptions.GrisuException;
 import io.grisu.core.utils.MapBuilder;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+
 public class ApiImpl implements Api {
+
+    private ThreadPoolExecutor executor;
+
+    public ApiImpl() {
+        this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
+    }
 
     @Override
     public CompletableFuture<String> echoService(String string) {
         return CompletableFuture.supplyAsync(() -> ">>>" + string);
+    }
+
+    @Override
+    public CompletableFuture<String> longRunningService(Long millisecs, String id) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Thread.sleep(millisecs);
+            } catch (InterruptedException e) {
+                System.out.println("e = " + e);
+                throw new RuntimeException(e);
+            }
+            return id;
+        }, executor);
     }
 
     @Override
